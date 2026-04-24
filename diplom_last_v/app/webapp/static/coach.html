@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Coach — дашборд тренера</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <!-- Telegram WebApp SDK: даёт initData, themeParams, close() и т.п. -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Plotly для графиков (загружается с CDN; для офлайн можно класть локально) -->
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+</head>
+<body>
+<div class="app">
+    <header>
+        <h1 id="brand">AI Coach</h1>
+        <p id="subtitle">Дашборд тренера</p>
+    </header>
+
+    <!-- Плитки с метриками -->
+    <section id="tiles" class="tiles">
+        <div class="tile"><div class="n" id="t-athletes">–</div><div class="l">Спортсменов</div></div>
+        <div class="tile"><div class="n" id="t-active">–</div><div class="l">Активных подписок</div></div>
+        <div class="tile"><div class="n" id="t-revenue">–</div><div class="l">Оборот, ₽</div></div>
+    </section>
+
+    <!-- Список спортсменов -->
+    <section>
+        <h2>Спортсмены</h2>
+        <div id="athletes" class="list"></div>
+    </section>
+
+    <!-- Детали выбранного спортсмена -->
+    <section id="details" hidden>
+        <h2 id="d-title"></h2>
+        <div id="d-plots"></div>
+        <h3>Журнал тренировок</h3>
+        <div id="d-logs" class="logs"></div>
+    </section>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

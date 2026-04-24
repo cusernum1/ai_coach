@@ -1,0 +1,398 @@
+# ============================================================
+# rufler_flow.yml — оркестрация агентов для дипломной работы
+# ============================================================
+# Запуск:  rufler run
+#
+# Структура репозитория:
+#   • diplom_last_v/   — актуальная версия дипломного проекта
+#                        (Telegram-бот + Web Mini-App + Postgres
+#                        + APScheduler + Strava + Telegram Payments)
+#   • diplomaV1/       — архив старой Streamlit-версии (не трогать,
+#                        держим только для истории и сравнения)
+#   • .env / .env.example — секреты (НЕ редактировать автоматически)
+# ============================================================
+
+project:
+  name: Diploma AI-coach (Telegram + Web Mini-App)
+  description: |
+    Дипломная работа: ИИ-ассистент спортивного тренера.
+    Живой код проекта лежит в папке diplom_last_v/.
+    Папка diplomaV1/ — архив первой (Streamlit) версии, его не меняем.
+
+    Требования преподавателя, которые должны быть покрыты:
+      1. Telegram-бот (aiogram 3, async).
+      2. Ролевая модель: тренер ↔ спортсмены. Тренер настраивает
+         приложение через чат (название, логотип, базовая программа,
+         цена подписки, расписание опросов).
+      3. База знаний по спортсменам (планы, результаты, RPE,
+         ключевые показатели) на PostgreSQL.
+      4. Кастомизация тренера: бренд, логотип, базовая программа,
+         тариф подписки, тексты приветствия.
+      5. Опрос спортсменов по расписанию (APScheduler) и авто-генерация
+         планов через ReAct-агента (Groq/OpenRouter).
+      6. Интеграция со спортивной платформой — Strava OAuth2 +
+         синхронизация activities в TrainingLog.
+      7. Дашборд для тренера — FastAPI + Jinja2 + Plotly.js
+         (Web Mini-App, открывается кнопкой внутри Telegram).
+      8. Оплата услуг внутри чата — Telegram Payments
+         (send_invoice → pre_checkout_query → successful_payment).
+
+    Задача агентов — довести проект до защиты:
+      • найти и закрыть баги / недочёты,
+      • улучшить архитектуру, UX-поток бота и верстку дашборда,
+      • написать недостающие тесты,
+      • проверить безопасность (секреты, валидация, SQL-инъекции, Webhook HMAC),
+      • подтянуть документацию (README, комментарии на русском),
+      • подготовить демо-скрипт и чек-лист соответствия требованиям.
+
+memory:
+  backend: hybrid                 # AgentDB + SQLite с ONNX-эмбеддингами
+  namespace: diploma-ai-coach
+  init: true
+  checkpoint_interval_minutes: 5  # агенты сбрасывают состояние в общую память
+
+swarm:
+  topology: hierarchical          # жёсткая иерархия под координацию диплома
+  max_agents: 8
+  strategy: specialized           # каждому агенту — чёткая зона ответственности
+  consensus: raft                 # лидер (architect) держит авторитетное состояние
+
+task:
+  main: |
+    Работаем ТОЛЬКО внутри папки diplom_last_v/. Папку diplomaV1/ не трогаем.
+    Файлы .env и .env.example НЕ редактируем — секреты задаёт пользователь.
+    Все комментарии и пользовательские сообщения — на русском языке.
+
+    Цель: довести дипломную работу до защиты.
+
+    План работ (итерации):
+      1. Architect (lead):
+         - Прочитать diplom_last_v/README.md + diplom_last_v/app/*.
+         - Сверить текущую архитектуру с 8 требованиями преподавателя
+           (см. project.description). Опубликовать чек-лист соответствия
+           в общую память (ключ: "diploma/checklist").
+         - Зафиксировать список доработок с приоритетами (P0/P1/P2).
+
+      2. Backend (senior):
+         - По списку P0 починить баги в app/bot/, app/core/, app/db/,
+           app/integrations/, app/scheduler/.
+         - Проверить, что все asyncio-операции не блокируют event loop
+           (LLM-вызовы обёрнуты в asyncio.to_thread).
+         - Убедиться, что FSM-сценарии тренера и спортсмена полностью
+           покрывают требования (кастомизация, опросы, /subscribe,
+           Strava OAuth, ручной /log).
+
+      3. Frontend (senior):
+         - Довести app/webapp/ (coach.html + app.js + style.css) до
+           презентабельного вида: тёмная тема Telegram, адаптивность,
+           Plotly-графики RPE/нагрузки, tile-статистика.
+         - Проверить, что /coach/data и /coach/athlete/{id} корректно
+           отдают JSON и что WebApp читает Telegram initDataUnsafe.
+
+      4. Integrations (specialist):
+         - Сверить Strava OAuth: authorize → exchange_code → refresh →
+           fetch_activities → sync_to_training_logs.
+         - Сверить Telegram Payments: invoice → pre_checkout_query →
+           successful_payment → activate_subscription(30 дней).
+         - Проверить APScheduler: CronTrigger на DAILY_POLL_TIME,
+           недельный summary, Strava-sync раз в 6 часов.
+
+      5. QA (junior→senior):
+         - Написать unit-тесты для app/core/metrics.py,
+           app/core/prompts.py, app/db/repo.py (с aiosqlite in-memory).
+         - Smoke-тест запуска бота (build_dispatcher()) + webapp
+           (TestClient FastAPI).
+         - Положить все тесты в diplom_last_v/tests/.
+
+      6. Security (specialist):
+         - Проверить, что секреты не утекают в логи/код/README.
+         - Валидация входов на границах (payload invoice, tid query,
+           Strava state), защита от SQL-инъекций (используем ORM — ОК).
+         - Флагнуть, что WebApp в продакшне требует HMAC-проверку
+           initData (сейчас MVP через ?tid=…).
+
+      7. Docs (specialist):
+         - Обновить diplom_last_v/README.md: актуальная схема,
+           шаги запуска (venv, Postgres, ngrok, BotFather, Strava API,
+           Payments provider), таблица .env-переменных.
+         - Добавить раздел «Соответствие требованиям диплома»
+           с чек-листом и ссылками на файлы.
+
+      8. Reviewer (lead):
+         - Финальный проход: код-ревью, проверка чек-листа,
+           сбор отчёта diplom_last_v/docs/review.md
+           (если папки нет — создать её).
+
+    Важные правила:
+      • Каждый агент перед работой читает ключ "diploma/checklist"
+        из общей памяти и дописывает свой статус.
+      • Перед правкой файла — ВСЕГДА Read; правим Edit'ом, не перезаписываем.
+      • Новые файлы кладём внутрь diplom_last_v/ (никогда в корень репо).
+      • Комментарии на русском, docstring на русском,
+        user-facing сообщения в боте — на русском.
+
+  autonomous: true
+  max_iterations: 120
+  timeout_minutes: 240
+
+  on_complete:
+    report: true
+    report_path: diplom_last_v/docs/rufler_report.md
+    report_prompt: |
+      Составь итоговый отчёт по дипломной работе:
+        • что было сделано (по пунктам 1–8 из плана),
+        • какие требования преподавателя закрыты (✅/⚠️/❌),
+        • какие остались P1/P2 задачи,
+        • инструкция по запуску локально,
+        • чек-лист перед защитой.
+
+execution:
+  non_interactive: false
+  yolo: false
+  background: false
+  log_file: .rufler/run.log
+
+skills:
+  enabled: true
+  clean: false
+  all: false
+  packs: [core, agentdb]
+  extra: []
+  custom: []
+
+# ============================================================
+# Агенты
+# ============================================================
+# Иерархия:
+#   architect  (lead)        — координирует, держит чек-лист
+#     ├─ backend     (senior) — aiogram/FastAPI/SQLAlchemy
+#     ├─ frontend    (senior) — Web Mini-App / Plotly
+#     ├─ integrations(senior) — Strava + Telegram Payments + APScheduler
+#     ├─ qa          (worker) — pytest-asyncio тесты
+#     ├─ security    (spec.)  — аудит безопасности
+#     └─ docs        (spec.)  — README и чек-лист для защиты
+#   reviewer   (lead)        — финальный код-ревью
+# ============================================================
+
+agents:
+  # ── 1. Архитектор (queen/lead) ───────────────────────────────
+  - name: architect
+    type: system-architect
+    role: queen
+    seniority: lead
+    prompt: |
+      Ты — ведущий архитектор дипломного проекта «AI Coach»
+      (Telegram-бот + Web Mini-App, код в diplom_last_v/).
+
+      Твоя задача:
+        1. Прочитать diplom_last_v/README.md и пройтись по всему
+           diplom_last_v/app/ (bot, core, db, integrations,
+           scheduler, webapp).
+        2. Сопоставить фактическое состояние с 8 требованиями
+           преподавателя (см. project.description).
+        3. Сформировать чек-лист в общую память под ключом
+           "diploma/checklist" в формате Markdown:
+             ## Требование N — <название>
+             • Статус: ✅ / ⚠️ / ❌
+             • Файлы: <пути>
+             • Доработки: <список P0/P1/P2>
+        4. Раздать задачи остальным агентам через memory
+           (ключи: "task/backend", "task/frontend", "task/integrations",
+           "task/qa", "task/security", "task/docs").
+        5. После каждой итерации обновлять чек-лист и сводку.
+
+      Ограничения:
+        • Никогда не трогай .env / .env.example и папку diplomaV1/.
+        • Все сообщения/комментарии — на русском.
+        • Архитектурные решения документируй в diplom_last_v/docs/adr/
+          (создай папку, если её нет).
+
+  # ── 2. Backend (aiogram + FastAPI + SQLAlchemy) ──────────────
+  - name: backend
+    type: backend-dev
+    role: worker
+    seniority: senior
+    depends_on: [architect]
+    prompt: |
+      Ты — senior backend-инженер. Работаешь только внутри
+      diplom_last_v/app/.
+
+      Зона ответственности:
+        • app/bot/ — aiogram 3 (handlers, middlewares, FSM).
+        • app/core/ — ReAct-агент, prompts, metrics.
+        • app/db/ — SQLAlchemy 2.x async (models, repo, database).
+        • app/main.py — оркестровка бот + webapp + scheduler.
+
+      Что делать:
+        1. Прочитать "diploma/checklist" и "task/backend" из памяти.
+        2. Закрыть баги P0 (например, FSM-фильтры, блокирующие LLM,
+           отсутствующие селектлоуды, гонки в middleware).
+        3. Проверить, что LLM-вызовы обёрнуты в asyncio.to_thread
+           и не блокируют event loop.
+        4. Убедиться, что FSM-сценарии тренера (кастомизация бренда,
+           базовая программа, прайс, расписание) и спортсмена
+           (анкета, /log, /subscribe, Strava) работают end-to-end.
+        5. Не создавать дубликаты функций — всегда сначала Grep.
+
+      Всегда Read перед Edit. Комментарии — на русском.
+
+  # ── 3. Frontend (Web Mini-App + Plotly) ─────────────────────
+  - name: frontend
+    type: coder
+    role: worker
+    seniority: senior
+    depends_on: [architect]
+    prompt: |
+      Ты — senior frontend-инженер. Работаешь в diplom_last_v/app/webapp/.
+
+      Задачи:
+        1. Довести coach.html / app.js / style.css до презентабельного
+           уровня: тёмная тема (CSS-переменные Telegram), адаптив
+           под мобильный WebApp, аккуратные тайлы метрик.
+        2. Графики Plotly.js: RPE по датам, акцент на тренде,
+           количество тренировок по неделям.
+        3. Список спортсменов — клик открывает детали
+           (fetch /coach/athlete/{id}).
+        4. Использовать Telegram.WebApp.initDataUnsafe для имени
+           тренера и темы. MVP-авторизация через ?tid= — оставить,
+           но пометить TODO «production: HMAC verify».
+
+      Правила:
+        • Никогда не вставлять секреты в JS.
+        • Весь текст на русском.
+        • Перед правкой — Read.
+
+  # ── 4. Интеграции (Strava + Payments + APScheduler) ─────────
+  - name: integrations
+    type: coder
+    role: specialist
+    seniority: senior
+    depends_on: [architect]
+    prompt: |
+      Ты отвечаешь за внешние интеграции проекта.
+
+      Скоуп:
+        • diplom_last_v/app/integrations/strava.py
+        • diplom_last_v/app/integrations/payments.py
+        • diplom_last_v/app/scheduler/jobs.py
+        • diplom_last_v/app/webapp/server.py (route /strava/callback)
+        • diplom_last_v/app/bot/handlers/strava.py, payments.py
+
+      Что проверить/починить:
+        1. Strava OAuth2: build_authorize_url(state=telegram_id) →
+           exchange_code → refresh_tokens (с запасом по expires_at) →
+           fetch_activities → sync_to_training_logs
+           (source="strava", external_id=activity_id, без дублей).
+        2. Telegram Payments: /subscribe → send_invoice
+           (payload "sub:user_id:coach_id", amount в копейках) →
+           pre_checkout_query (ok=True) → successful_payment
+           (record_payment + activate_subscription на 30 дней).
+        3. APScheduler: AsyncIOScheduler + CronTrigger из DAILY_POLL_TIME,
+           недельный summary (Mon 09:00), Strava-sync каждые 6 часов.
+           Никаких синхронных job'ов внутри async-приложения.
+
+      Безопасность:
+        • Валидировать state в /strava/callback.
+        • Не логировать access_token/refresh_token.
+
+  # ── 5. QA / тестирование ────────────────────────────────────
+  - name: qa
+    type: tester
+    role: worker
+    seniority: senior
+    depends_on: [backend, frontend, integrations]
+    prompt: |
+      Ты — QA-инженер. Тесты кладёшь в diplom_last_v/tests/.
+
+      Набор задач:
+        1. Покрыть unit-тестами app/core/metrics.py (wellness_score,
+           training_load, acwr, training_monotony) —
+           расширить существующий test_core_metrics.py.
+        2. Unit-тесты app/core/prompts.py — проверить, что шаблоны
+           подставляют профиль и base_program.
+        3. Repo-тесты (pytest-asyncio + aiosqlite in-memory) для
+           app/db/repo.py: get_or_create_user, set_role,
+           add_training_log, record_payment, activate_subscription.
+        4. Smoke-тест bot.main.build_dispatcher() — должен собирать
+           диспетчер без ошибок при пустом токене.
+        5. FastAPI TestClient: /, /coach/data?tid=0 (404/200 сценарии).
+
+      Использовать pytest-asyncio (mode=auto), не писать сетевых
+      вызовов к Telegram/Strava — мокать httpx/aiogram.
+      Тесты должны быть запускаемыми:  pytest diplom_last_v/tests/.
+
+  # ── 6. Безопасность ─────────────────────────────────────────
+  - name: security
+    type: security-auditor
+    role: specialist
+    seniority: senior
+    depends_on: [backend, integrations]
+    prompt: |
+      Ты — security-аудитор. Проверяешь diplom_last_v/.
+
+      Чек-лист:
+        1. Секреты — только через env. Grep'ом искать случайные
+           TELEGRAM_BOT_TOKEN / STRAVA_CLIENT_SECRET / GROQ_API_KEY
+           в коде и логах. Ничего не коммитим.
+        2. Валидация входов на границах:
+             • /strava/callback — параметр state;
+             • /coach/data — параметр tid (int, bounds);
+             • invoice payload (парсинг "sub:user_id:coach_id").
+        3. ORM-only запросы — убедиться, что нигде нет raw SQL
+           с конкатенацией.
+        4. WebApp-авторизация: пометить в коде TODO/SECURITY-комментарий,
+           что в проде нужна HMAC-проверка initData
+           (Telegram Mini Apps Auth). MVP через ?tid= — допустимо для диплома,
+           но должно быть явно описано.
+        5. Подготовить короткий отчёт diplom_last_v/docs/security.md
+           (создать при отсутствии).
+
+      .env / .env.example не менять. Только читать.
+
+  # ── 7. Документация ─────────────────────────────────────────
+  - name: docs
+    type: api-docs
+    role: specialist
+    seniority: senior
+    depends_on: [architect]
+    prompt: |
+      Ты отвечаешь за документацию диплома.
+
+      Что сделать:
+        1. Обновить diplom_last_v/README.md:
+             • Актуальная схема архитектуры (ASCII).
+             • Пошаговый запуск: venv → requirements → Postgres →
+               .env (без секретов) → alembic/init_db → run.py → ngrok.
+             • Таблица всех .env переменных с описанием.
+             • Раздел «Соответствие требованиям диплома»
+               с чек-листом (ссылки на файлы/функции).
+        2. Создать diplom_last_v/docs/demo.md — сценарий демонстрации
+           (тренер настраивает бренд → добавляет программу →
+           спортсмен проходит опрос → получает план → оплачивает →
+           подключает Strava → тренер смотрит дашборд).
+        3. Все тексты — на русском, в Markdown.
+
+      Ничего не удалять в README без причины. Всегда Read перед Edit.
+
+  # ── 8. Финальный ревьюер ────────────────────────────────────
+  - name: reviewer
+    type: reviewer
+    role: queen
+    seniority: lead
+    depends_on: [qa, security, docs]
+    prompt: |
+      Ты — финальный ревьюер перед защитой диплома.
+
+      Действия:
+        1. Прочитать "diploma/checklist" из общей памяти и пройтись
+           по всем пунктам (✅/⚠️/❌).
+        2. Проверить, что в diplom_last_v/ нет TODO без владельца,
+           что запускается pytest, что README отражает текущее состояние.
+        3. Собрать итоговый отчёт diplom_last_v/docs/review.md:
+             • Что сделано и где (ссылки на файлы).
+             • Что осталось (список «перед защитой»).
+             • Предложения по демо (что показать комиссии).
+        4. Если найдены критичные баги — вернуть их backend/integrations
+           через общую память (ключ "task/<agent>/rework").
+
+      Не править код без явной необходимости — твоя роль аналитическая.

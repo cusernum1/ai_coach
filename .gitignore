@@ -35,6 +35,17 @@ logs/
 .DS_Store
 Thumbs.db
 
-venv/# Шрифты (скачиваются через download_fonts.py)
+venv/
+
+# Шрифты (скачиваются через download_fonts.py)
 fonts/*
 !fonts/.gitkeep
+
+# Claude / RuFlo tool directories (local only)
+.claude/
+.claude-flow/
+.hive-mind/
+.swarm/
+.mcp.json
+agentdb.rvf
+agentdb.rvf.lock
