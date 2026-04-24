@@ -41,7 +41,7 @@ venv/
 fonts/*
 !fonts/.gitkeep
 
-# Claude / RuFlo tool directories (local only)
+# Claude / RuFlo tool directories and configs (local only)
 .claude/
 .claude-flow/
 .hive-mind/
@@ -49,3 +49,6 @@ fonts/*
 .mcp.json
 agentdb.rvf
 agentdb.rvf.lock
+CLAUDE.md
+rufler_flow.yml
+Diploma/
