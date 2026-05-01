@@ -47,6 +47,16 @@ else:
     _client = Groq(api_key=config.GROQ_API_KEY)
 
 
+# Инструменты, результат которых возвращается напрямую без пересказа LLM.
+# LLM склонен сокращать длинные планы — обходим это, возвращая контент сразу.
+DIRECT_RETURN_TOOLS = {
+    "generate_training_plan",
+    "nutrition_recommendation",
+    "recovery_recommendation",
+    "analyze_progress",
+    "analyze_workload",
+}
+
 # ── Определения функций (OpenAI function-calling schema) ──────
 TOOLS = [
     {
@@ -286,6 +296,7 @@ async def run_agent(
                     "tool_calls": [tc.model_dump() for tc in tool_calls],
                 }
             )
+            direct_result: Optional[str] = None
             for tc in tool_calls:
                 tname = tc.function.name
                 try:
@@ -304,7 +315,14 @@ async def run_agent(
                         "content": tool_result,
                     }
                 )
-            continue  # спрашиваем модель дальше для финального ответа
+                if tname in DIRECT_RETURN_TOOLS:
+                    direct_result = tool_result
+
+            # Контент-инструменты возвращаем напрямую — LLM иначе пересказывает
+            if direct_result is not None:
+                logger.info(f"Agent DIRECT | {(time.time()-t_total)*1000:.0f}ms | tools={sorted(used_tools)}")
+                return direct_result
+            continue  # для нон-контент инструментов — спрашиваем LLM дальше
 
         # Финальный текстовый ответ
         final_text = msg.content or ""

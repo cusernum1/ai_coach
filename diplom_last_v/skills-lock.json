@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": {
+    "cold-email": {
+      "source": "humanizerai/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/cold-email/SKILL.md",
+      "computedHash": "2853e95dc8f0af2df2288a18bc1486e94529207634cc55293472dbf8946799c9"
+    },
+    "detect-ai": {
+      "source": "humanizerai/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/detect-ai/SKILL.md",
+      "computedHash": "b8e24564c9c50567aac3b1514e800d05da1f702e719113166cffdafe0908d4b4"
+    },
+    "follow-up": {
+      "source": "humanizerai/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/follow-up/SKILL.md",
+      "computedHash": "9d2ef813672a826b72446afae136adede6b24c82a892bf478bd74113a9a5992e"
+    },
+    "humanize": {
+      "source": "humanizerai/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/humanize/SKILL.md",
+      "computedHash": "d8898832c1e5648c9600d6b79b985b415d849da2cfa3b40cc4e6d51ea2d1511d"
+    },
+    "readability": {
+      "source": "humanizerai/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/readability/SKILL.md",
+      "computedHash": "3f9614d72280d22cc3e0d0c6a9bb77abec6ea01dc841faf93885818c778c3ee7"
+    },
+    "word-stats": {
+      "source": "humanizerai/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/word-stats/SKILL.md",
+      "computedHash": "e247d2359bffdc51195e7188e868033e5c70d94e4837e8d56f3f6033d50b2f7f"
+    }
+  }
+}

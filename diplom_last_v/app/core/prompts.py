@@ -164,13 +164,32 @@ def get_nutrition_prompt(
     """Промпт для рекомендаций по питанию."""
     goal = specific_goal or athlete.get("goal", "общая физическая форма")
 
+    weight = athlete.get("weight_kg")
+    height = athlete.get("height_cm")
+    restrictions = athlete.get("dietary_restrictions")
+    meals = athlete.get("meals_per_day")
+
+    body_line = ""
+    if weight and height:
+        bmi = weight / (height / 100) ** 2
+        body_line = f"\n• Вес: {weight} кг | Рост: {height} см | ИМТ: {bmi:.1f}"
+    elif weight:
+        body_line = f"\n• Вес: {weight} кг"
+
+    restrictions_line = (
+        f"\n• Аллергии/ограничения: {restrictions}"
+        if restrictions and restrictions.lower() not in ("нет", "")
+        else ""
+    )
+    meals_line = f"\n• Приёмов пищи в день: {meals}" if meals else ""
+
     return f"""Разработай подробные рекомендации по питанию для спортсмена.
 
 ПРОФИЛЬ:
 • {athlete['name']}, {athlete.get('age', '—')} лет
 • Спорт: {athlete.get('sport', '—')} | Уровень: {athlete.get('level', '—')}
 • Цель: {goal}
-• Тренировок/нед.: {athlete.get('sessions_per_week', '—')}
+• Тренировок/нед.: {athlete.get('sessions_per_week', '—')}{body_line}{restrictions_line}{meals_line}
 • Тип дня: {training_day}
 
 СТРУКТУРА РЕКОМЕНДАЦИЙ:

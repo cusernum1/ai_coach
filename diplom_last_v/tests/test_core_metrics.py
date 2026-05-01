@@ -1,12 +1,13 @@
 # ============================================================
-# tests/test_core_metrics.py — smoke-тесты чистых формул
+# tests/test_core_metrics.py — smoke-тесты чистых функций
 # ============================================================
-# Проверяем только математику из app/core/metrics.py —
-# без БД и LLM, быстро.
+# Проверяем математику из app/core/metrics.py и утилиты
+# app/bot/utils.py — без БД и LLM, быстро.
 # ============================================================
 
 import pytest
 
+from app.bot.utils import chunk_text, money
 from app.core.metrics import (
     acwr,
     acwr_zone,
@@ -59,3 +60,39 @@ def test_training_monotony():
     # Разная — возвращает число
     value = training_monotony([5, 7, 3, 6])
     assert value is not None and value > 0
+
+
+# =============================================================
+#                   Утилиты (app/bot/utils.py)
+# =============================================================
+
+def test_chunk_text_short():
+    # Короткий текст возвращается как есть
+    assert chunk_text("hello") == ["hello"]
+
+
+def test_chunk_text_splits_long():
+    # Текст длиннее лимита должен делиться
+    block = "x" * 2000
+    long_text = block + "\n\n" + block + "\n\n" + block
+    parts = chunk_text(long_text, limit=3800)
+    assert len(parts) >= 2
+    for p in parts:
+        assert len(p) <= 3800
+
+
+def test_chunk_text_hard_split():
+    # Одиночный блок длиннее лимита — режется жёстко
+    big_block = "a" * 5000
+    parts = chunk_text(big_block, limit=3800)
+    assert len(parts) == 2
+    assert len(parts[0]) == 3800
+    assert len(parts[1]) == 1200
+
+
+def test_money_rub():
+    assert money(100000) == "1 000.00 ₽"
+
+
+def test_money_usd():
+    assert money(499, "USD") == "4.99 USD"

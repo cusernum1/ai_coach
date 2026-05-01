@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional, Sequence
 
 from sqlalchemy import select, update, delete, func
@@ -118,6 +118,18 @@ async def get_coach_config(session: AsyncSession, coach_id: int) -> Optional[Coa
     return (await session.execute(q)).scalar_one_or_none()
 
 
+async def get_coach_brand(
+    session: AsyncSession, coach_id: Optional[int]
+) -> tuple[str, Optional[str]]:
+    """Возвращает (brand_name, base_program) для тренера или дефолтные значения."""
+    if coach_id is None:
+        return "AI Coach", None
+    cfg = await get_coach_config(session, coach_id)
+    if cfg is None:
+        return "AI Coach", None
+    return cfg.brand_name, cfg.base_program
+
+
 async def update_coach_config(session: AsyncSession, coach_id: int, **fields) -> CoachConfig:
     """Частичное обновление настроек тренера."""
     cfg = await get_coach_config(session, coach_id)
@@ -164,6 +176,29 @@ async def update_athlete_profile(session: AsyncSession, athlete_id: int, **field
     await session.execute(
         update(Athlete).where(Athlete.id == athlete_id).values(**{k: v for k, v in fields.items() if v is not None})
     )
+
+
+async def update_athlete_nutrition(
+    session: AsyncSession,
+    athlete_id: int,
+    *,
+    weight_kg: Optional[float] = None,
+    height_cm: Optional[int] = None,
+    dietary_restrictions: Optional[str] = None,
+    meals_per_day: Optional[int] = None,
+) -> None:
+    """Сохранить данные о теле/питании спортсмена."""
+    fields: dict = {}
+    if weight_kg is not None:
+        fields["weight_kg"] = weight_kg
+    if height_cm is not None:
+        fields["height_cm"] = height_cm
+    if dietary_restrictions is not None:
+        fields["dietary_restrictions"] = dietary_restrictions
+    if meals_per_day is not None:
+        fields["meals_per_day"] = meals_per_day
+    if fields:
+        await session.execute(update(Athlete).where(Athlete.id == athlete_id).values(**fields))
 
 
 async def attach_athlete_to_default_coach(session: AsyncSession, athlete: Athlete) -> None:
@@ -334,7 +369,7 @@ async def activate_subscription(
     athlete = await get_athlete_by_user_id(session, user_id)
     if athlete is None:
         return
-    until = datetime.utcnow() + timedelta(days=days)
+    until = datetime.now(timezone.utc) + timedelta(days=days)
     athlete.subscription_active = True
     athlete.subscription_until = until
     await session.flush()

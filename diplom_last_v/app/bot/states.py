@@ -32,6 +32,19 @@ class TrainingLogFlow(StatesGroup):
     waiting_notes = State()
 
 
+class PlanQuestionnaire(StatesGroup):
+    """Уточняющий вопрос перед составлением тренировочного плана."""
+    waiting_weeks = State()
+
+
+class NutritionQuestionnaire(StatesGroup):
+    """Уточняющие вопросы перед составлением плана питания."""
+    waiting_weight = State()
+    waiting_height = State()
+    waiting_restrictions = State()
+    waiting_meals = State()
+
+
 class CoachSettings(StatesGroup):
     """Тренер меняет настройку через чат."""
     # В data передаём, какое именно поле редактируется: field_name.

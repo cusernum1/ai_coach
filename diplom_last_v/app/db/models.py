@@ -172,6 +172,12 @@ class Athlete(Base):
     goal: Mapped[Optional[str]] = mapped_column(String(255))
     sessions_per_week: Mapped[Optional[int]] = mapped_column(Integer)
 
+    # Данные для плана питания
+    weight_kg: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    height_cm: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    dietary_restrictions: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    meals_per_day: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
     # Служебное
     subscription_active: Mapped[bool] = mapped_column(Boolean, default=False)
     subscription_until: Mapped[Optional[datetime]] = mapped_column(DateTime)

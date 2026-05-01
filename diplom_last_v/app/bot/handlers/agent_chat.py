@@ -19,7 +19,7 @@ from app.config import config
 from app.core.agent import run_agent
 from app.db import get_session
 from app.db.models import Role, User
-from app.db.repo import get_coach_config
+from app.db.repo import get_coach_brand
 
 router = Router(name="agent_chat")
 
@@ -48,12 +48,8 @@ async def on_free_text(message: Message, user: User | None) -> None:
         return
 
     athlete = user.athlete
-    brand, base_program = "AI Coach", None
     async with get_session() as s:
-        if athlete.coach_id:
-            cfg = await get_coach_config(s, athlete.coach_id)
-            if cfg:
-                brand, base_program = cfg.brand_name, cfg.base_program
+        brand, base_program = await get_coach_brand(s, athlete.coach_id)
 
     # Индикатор «печатает…» через отправку «думаю» заглушки:
     thinking = await message.answer("💭 думаю…")
